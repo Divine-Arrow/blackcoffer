@@ -6,7 +6,7 @@ section#body {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%)
+    transform: translate(-50%, -50%);
 }
 
 #chart {
@@ -37,7 +37,7 @@ section#body {
 }
 
 #right_bar {
-    background-color: #5f75f1;
+    background-color: #5c6fd8;
     overflow: hidden;
     height: 100vh
 }
@@ -95,11 +95,16 @@ section#body {
     font-family: 'Lato', sans-serif;
     display: block;
     width: 100%;
-    background-color: #6ae655;
+    background-color: #344acc;
     color: rgb(247, 247, 247);
     font-size: 22px;
     letter-spacing: 0.5px;
     word-spacing: 2px;
+    transition: ease all 0.3s;
+}
+
+#apply:hover {
+    background-color: #1b36d8;
 }
 
 select,

@@ -4,111 +4,14 @@ var cordinates = ["country", "pestle", "region", "sector", "topic"],
     xCordData = [],
     yCord = cordinates[3],
     yCordData = [],
-    yearRange = [],
+    years = [],
+    yearRange = {
+        allYear: true,
+        counter: 0
+    },
     measures = measuresArray[0],
     maxMeasuredValue = 0,
-    colorRange = {
-        'intensity': [{
-                from: -1,
-                to: 0,
-                name: '0',
-                color: 'rgb(255, 226, 154);'
-            },
-            {
-                from: 1,
-                to: 6,
-                name: '1-6',
-                color: 'rgb(140, 249, 122)'
-            },
-            {
-                from: 7,
-                to: 14,
-                name: '7-14',
-                color: 'rgb(131, 245, 214)'
-            },
-            {
-                from: 15,
-                to: 21,
-                name: '15-21',
-                color: 'rgb(63, 172, 247)'
-            },
-            {
-                from: 22,
-                to: 50,
-                name: '22-50',
-                color: 'rgb(184, 149, 255)'
-            },
-            {
-                from: 51,
-                to: 72,
-                name: '51-72',
-                color: 'rgb(251, 52, 94)'
-            }
-        ],
-        'relevance': [{
-                from: 0,
-                to: 0,
-                name: '0',
-                color: 'rgb(255, 226, 154)'
-            },
-            {
-                from: 1,
-                to: 2,
-                name: '1-2',
-                color: 'rgb(140, 249, 122)'
-            },
-            {
-                from: 3,
-                to: 4,
-                name: '3-4',
-                color: 'rgb(131, 245, 214)'
-            },
-            {
-                from: 5,
-                to: 6,
-                name: '5-6',
-                color: 'rgb(63, 172, 247)'
-            },
-            {
-                from: 7,
-                to: 7,
-                name: '7',
-                color: 'rgb(251, 52, 94)'
-            }
-        ],
-        'likelihood': [{
-                from: 0,
-                to: 0,
-                name: '0',
-                color: 'rgb(255, 226, 154);'
-            },
-            {
-                from: 1,
-                to: 1,
-                name: '1',
-                color: 'rgb(140, 249, 122)'
-            },
-            {
-                from: 2,
-                to: 2,
-                name: '2',
-                color: 'rgb(63, 172, 247)'
-            },
-            {
-                from: 3,
-                to: 3,
-                name: '3',
-                color: 'rgb(184, 149, 255)'
-            },
-            {
-                from: 4,
-                to: 4,
-                name: '4',
-                color: 'rgb(251, 52, 94)'
-            }
-        ]
-    };
-
+    allColors = ["rgb(255, 226, 154)", "rgb(140, 249, 122)", "rgb(131, 245, 214)", "rgb(63, 172, 247)", "rgb(184, 149, 255)", "rgb(251, 52, 94)"];
 
 $.getJSON("jsondata.json", (data) => {
 
@@ -116,10 +19,22 @@ $.getJSON("jsondata.json", (data) => {
         xCordData = [];
         yCordData = [];
         data.forEach(element => {
-            if (element[xCord] !== "" && element[yCord] !== "")
-                xCordData.push(element[xCord])
-            if (element[yCord] !== "" && element[xCord] !== "")
-                yCordData.push(element[yCord])
+            // Corinates
+            if (element[xCord] !== "" && element[yCord] !== "") {
+                if (yearRange.allYear) {
+                    xCordData.push(element[xCord]);
+                    yCordData.push(element[yCord]);
+                } else if ((Math.floor(element.start_year) >= yearRange.start_year) && (Math.floor(element.end_year) <= yearRange.end_year)) {
+                    // remove unwanted empty cells when year range used
+                    xCordData.push(element[xCord]);
+                    yCordData.push(element[yCord]);
+                }
+            }
+            // years data
+            if (element["start_year"] !== "" && element["end_year"] !== "") {
+                years.push(element["start_year"]);
+                years.push(element["end_year"]);
+            }
         });
 
         // function to remove similar data
@@ -127,26 +42,55 @@ $.getJSON("jsondata.json", (data) => {
 
         xCordData = uniqueArray(xCordData);
         yCordData = uniqueArray(yCordData);
+        // for years
+        if (!yearRange.counter) {
+            years = uniqueArray(years);
+            yearRange.start_year = Math.min.apply(Math, years);
+            yearRange.end_year = Math.max.apply(Math, years);
+            createYearOptions();
+            yearRange.counter++;
+        }
+    }
+
+    var generateColor = (maxValue) => {
+        var temp = [{
+                from: 0,
+                to: 0,
+                /* name: "", // leaving name will automatically take ranges*/
+                color: allColors[0]
+            }],
+            counter = 0,
+            endValue = Math.floor(maxValue / 5);
+        while (counter < 5) {
+            temp.push({
+                from: temp[temp.length - 1].to + 1,
+                to: temp[temp.length - 1].to + 1 + endValue,
+                /* name: "", // leaving name will automatically take ranges*/
+                color: allColors[counter + 1]
+            });
+            if (temp[temp.length - 1].to >= maxValue) {
+                break;
+            }
+            counter++
+        }
+        return temp;
     }
 
     var generateYData = (x, yRowName) => {
         var measuredValue = 0;
+        // console.log("year: ", yearRange);
         data.forEach(e => {
-            if (e[xCord] === x && e[yCord] === yRowName) {
-                if (measuredValue < e[measures]) {
-                    measuredValue = e[measures];
+            if (e[xCord] === x && e[yCord] === yRowName && measuredValue < e[measures]) {
+                if (yearRange.allYear) {
+                    measuredValue += e[measures];
+                } else {
+                    if ((Math.floor(e.start_year) >= yearRange.start_year) && (Math.floor(e.end_year) <= yearRange.end_year)) {
+                        measuredValue += e[measures];
+                    }
                 }
-                /* if (!yearRange.length) {
-                    if (measuredValue < e[measures]) {
-                        measuredValue = e[measures];
-                    }
-                } else if (e.end_year >= yearRange[0] && e.end_year <= yearRange[1]) {
-                    if (measuredValue < e[measures]) {
-                        measuredValue = e[measures];
-                    }
-                } */
             }
         });
+        // adding max value to globally
         if (maxMeasuredValue < measuredValue)
             maxMeasuredValue = measuredValue
         return measuredValue;
@@ -171,18 +115,12 @@ $.getJSON("jsondata.json", (data) => {
     var createSeries = () => {
         createBase();
         var tempArr = [];
-        [{
-            name: yCordData[0],
-            data: generateData(yCordData[0])
-        }];
-
         for (var i = 0; i < yCordData.length; i++) {
             var innerObj = {};
             innerObj.name = yCordData[i];
             innerObj.data = generateData(yCordData[i]);
             tempArr.push(innerObj);
         }
-
         return tempArr;
     }
 
@@ -195,20 +133,20 @@ $.getJSON("jsondata.json", (data) => {
             background: "#f7f7f7",
             foreColor: "#333"
         },
+        dataLabels: {
+            enabled: false
+        },
+        series: createSeries(),
         // color
         plotOptions: {
             heatmap: {
                 radius: 3,
                 enableShades: false,
                 colorScale: {
-                    ranges: colorRange[measures]
+                    ranges: generateColor(maxMeasuredValue)
                 }
             }
         },
-        dataLabels: {
-            enabled: false
-        },
-        series: createSeries(),
         title: {
             text: 'Heatmap Chart',
             align: 'center',
@@ -233,18 +171,20 @@ $.getJSON("jsondata.json", (data) => {
 
     // switch
     $("#apply").click(() => {
+        maxMeasuredValue = 0;
         setPrameters();
+        chart.updateOptions({
+            series: createSeries()
+        });
+
         chart.updateOptions({
             plotOptions: {
                 heatmap: {
                     colorScale: {
-                        ranges: colorRange[measures]
+                        ranges: generateColor(maxMeasuredValue)
                     }
                 }
             }
         });
-        chart.updateOptions({
-            series: createSeries()
-        })
     });
-})
+});
